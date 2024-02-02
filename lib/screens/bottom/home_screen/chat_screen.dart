@@ -1,6 +1,7 @@
 import 'package:chat_app_flutter/model/user_model.dart';
 import 'package:chat_app_flutter/screens/widgets/message.dart';
 import 'package:chat_app_flutter/screens/widgets/message_text_field.dart';
+import 'package:chat_app_flutter/utils/constant.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -25,21 +26,22 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  String formatDateWithLabel(DateTime dateTime) {
+  String _getDateHeaderText(String date) {
+    DateTime dateTime = DateTime.parse(date);
     DateTime now = DateTime.now();
     DateTime today = DateTime(now.year, now.month, now.day);
     DateTime yesterday = today.subtract(Duration(days: 1));
 
-    if (dateTime.year == now.year &&
-        dateTime.month == now.month &&
-        dateTime.day == now.day) {
+    if (dateTime.year == today.year &&
+        dateTime.month == today.month &&
+        dateTime.day == today.day) {
       return 'Today';
     } else if (dateTime.year == yesterday.year &&
         dateTime.month == yesterday.month &&
         dateTime.day == yesterday.day) {
       return 'Yesterday';
     } else {
-      return DateFormat('dd-MM-yyyy').format(dateTime);
+      return DateFormat('MMMM dd, yyyy').format(dateTime);
     }
   }
 
@@ -170,46 +172,82 @@ class _ChatScreenState extends State<ChatScreen> {
                     if (snapshot.data.docs.length < 1) {
                       return const Center(child: Text("Say Hi"));
                     }
+
+                    // Group messages by date
+                    Map<String, List<DocumentSnapshot>> groupedMessages = {};
+                    snapshot.data.docs.forEach((doc) {
+                      Timestamp timestamp = doc['date'];
+                      DateTime dateTime = timestamp.toDate();
+                      String formattedDate =
+                          DateFormat('yyyy-MM-dd').format(dateTime);
+
+                      groupedMessages.putIfAbsent(formattedDate, () => []);
+                      groupedMessages[formattedDate]!.add(doc);
+                    });
+
                     return ListView.builder(
-                      itemCount: snapshot.data.docs.length,
+                      itemCount: groupedMessages.length,
                       reverse: true,
                       physics: const BouncingScrollPhysics(),
                       itemBuilder: (context, index) {
-                        bool isMe = snapshot.data.docs[index]['senderId'] ==
-                            widget.currentUser.uid;
+                        String date = groupedMessages.keys.elementAt(index);
+                        List<DocumentSnapshot> messages =
+                            groupedMessages[date]!;
 
-                        Timestamp timestamp = snapshot.data.docs[index]['date'];
-                        DateTime dateTime = timestamp.toDate();
-                        //  time  //
-                        String formattedTime = DateFormat.jm().format(dateTime);
-                        //  date  //
-                        String formattedDate = formatDateWithLabel(dateTime);
+                        // bool isMe = snapshot.data.docs[index]['senderId'] ==
+                        // widget.currentUser.uid;
 
                         return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Padding(
-                              padding: EdgeInsets.only(
-                                  bottom: isMe ? 20 : 0, top: 10),
-                              child: Center(
-                                child: Text(
-                                  '$formattedDate',
-                                  style: GoogleFonts.dmSans(
-                                    textStyle: TextStyle(
-                                      color: Color(0xFF000D07),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      height: 0.08,
+                              padding: EdgeInsets.only(bottom: 20),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(
+                                      color: MyColors.primaryColor,
+                                      thickness: 1,
                                     ),
                                   ),
-                                ),
+                                  Center(
+                                    child: Text(
+                                      '  ${_getDateHeaderText(date)}  ',
+                                      style: GoogleFonts.dmSans(
+                                        textStyle: TextStyle(
+                                          color: Color(0xFF000D07),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(
+                                      color: MyColors.primaryColor,
+                                      thickness: 1,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            Message(
-                              message: snapshot.data.docs[index]['message'],
-                              isMe: isMe,
-                              time: formattedTime,
-                              friendImage: widget.friendImage,
-                              friendName: widget.friendname,
+                            Column(
+                              children: messages.reversed.map((doc) {
+                                bool isMe =
+                                    doc['senderId'] == widget.currentUser.uid;
+                                Timestamp timestamp = doc['date'];
+                                DateTime dateTime = timestamp.toDate();
+                                String formattedTime =
+                                    DateFormat.jm().format(dateTime);
+
+                                return Message(
+                                  message: doc['message'],
+                                  isMe: isMe,
+                                  time: formattedTime,
+                                  friendImage: widget.friendImage,
+                                  friendName: widget.friendname,
+                                );
+                              }).toList(),
                             ),
                           ],
                         );

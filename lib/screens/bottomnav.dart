@@ -40,7 +40,7 @@ class _BottomNavState extends State<BottomNav> {
       MessagePage(user: widget.user!),
       const CallPage(),
       const ContactPage(),
-      const SettingPage()
+      const SettingsPage()
     ];
   }
 

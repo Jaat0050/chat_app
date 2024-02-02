@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 class MyColors {
   static Color primaryColor = Color.fromRGBO(36, 120, 109, 1);
+  static Color greyColor2 = Color(0xffE8E8E8);
+  static const themeColor = Color(0xfff5a623);
+  static const greyColor = Color(0xffaeaeae);
+
   // static Color secondaryColor = Colors.black;
   // static Color blue = const Color(0xff2E5CAA);
   // static Color lightBlue = const Color(0xff6495ED);
